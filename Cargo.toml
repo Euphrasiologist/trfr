@@ -1,0 +1,9 @@
+[package]
+name = "trfr"
+version = "0.1.0"
+edition = "2021"
+authors = ["Max Brown <max.carter-brown@aru.ac.uk>"]
+keywords = ["parser", "tandem repeat", "tandem repeat finder", "tfr"]
+categories = ["parser-implementations"]
+homepage = "https://github.com/Euphrasiologist/trfr"
+repository = "https://github.com/Euphrasiologist/trfr"
