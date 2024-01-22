@@ -6,9 +6,14 @@ use std::{
 
 use crate::{Error, ErrorKind, Record, Result};
 
+/// If you passed `-d`, use `D`, and if you passed
+/// `-ngs`, then you want `Ngs`. This leads to a
+/// slight modification in the parsing.
 #[derive(Clone, Copy)]
 pub enum Flag {
+    /// From the `-d` command line option
     D,
+    /// From the `-ngs` command line option
     Ngs,
 }
 

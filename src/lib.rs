@@ -1,4 +1,4 @@
-/*
+/*!
 The `trfr` crate is purely for parsing the output of
 the command line tool `Tandem Repeat Finder` (or `trf`).
 
