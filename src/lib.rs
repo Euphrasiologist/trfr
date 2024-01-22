@@ -1,5 +1,3 @@
-// Requires trf
-
 use core::fmt;
 use std::{
     error::Error as StdError,
@@ -38,6 +36,7 @@ pub enum ErrorKind {
     Int(ParseIntError),
     Float(ParseFloatError),
     Parser(String),
+    ReadRecord(String),
 }
 
 impl From<io::Error> for Error {
@@ -64,6 +63,7 @@ impl fmt::Display for Error {
             ErrorKind::Int(ref err) => write!(f, "parsing integer error - {}", err),
             ErrorKind::Float(ref err) => write!(f, "parsing float error - {}", err),
             ErrorKind::Parser(ref err) => write!(f, "parser error - {}", err),
+            ErrorKind::ReadRecord(ref err) => write!(f, "reading record - {}", err),
         }
     }
 }
@@ -167,6 +167,7 @@ impl<R: io::Read> Reader<R> {
                     Some(sequence_id) => {
                         if let Some(id) = sequence_id {
                             self.id = id;
+                            continue;
                         }
                         break;
                     }
@@ -174,7 +175,7 @@ impl<R: io::Read> Reader<R> {
                     None => continue,
                 },
                 Err(e) => {
-                    return Err(Error::new(ErrorKind::Parser(format!(
+                    return Err(Error::new(ErrorKind::ReadRecord(format!(
                         "at line {}, {}",
                         self.line, e
                     ))))
@@ -235,10 +236,12 @@ fn parse_input_line(input: String, record: &mut Record) -> Result<Option<Option<
         record.consensus_pattern = consensus_pattern.to_string();
         record.repeat_seq = repeat_seq.trim().to_string();
 
-        return Ok(Some(None));
+        Ok(Some(None))
+    } else {
+        Err(Error::new(ErrorKind::Parser(
+            "could not split into 15 elements".into(),
+        )))
     }
-
-    Ok(None)
 }
 
 /// A borrowed iterator over the records of a refer file.
