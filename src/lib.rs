@@ -8,7 +8,7 @@ see [here](https://github.com/Benson-Genomics-Lab/TRF) for the
 source code and citation for `trf`.
 
 The API follows that of most mainstream Rust API's (in particular
-BurntSushi's). It is an iterator API currently and is unstable.
+BurntSushi's). It is an iterator API.
 
 # Example
 
@@ -17,7 +17,8 @@ use std::{error::Error, io, process};
 
 fn example() -> Result<(), Box<dyn Error>> {
     // Build the trfr reader
-    let mut rdr = trfr::Reader::from_reader(io::stdin());
+    // and assuming you are parsing with `-d` flag only
+    let mut rdr = trfr::Reader::from_reader(io::stdin(), trfr::Flag::D);
     for result in rdr.records() {
         let record = result?;
         println!("{:?}", record);
