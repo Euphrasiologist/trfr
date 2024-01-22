@@ -6,27 +6,35 @@ use std::{
 
 use crate::{Error, ErrorKind, Record, Result};
 
+#[derive(Clone, Copy)]
+pub enum Flag {
+    D,
+    Ngs,
+}
+
 pub struct Reader<R> {
     rdr: io::BufReader<R>,
     line: u64,
     id: String,
+    flag: Flag,
 }
 
 impl Reader<File> {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Reader<File>> {
-        Ok(Reader::new(File::open(path)?))
+    pub fn from_path<P: AsRef<Path>>(path: P, flag: Flag) -> Result<Reader<File>> {
+        Ok(Reader::new(File::open(path)?, flag))
     }
-    pub fn from_reader<R: io::Read>(rdr: R) -> Reader<R> {
-        Reader::new(rdr)
+    pub fn from_reader<R: io::Read>(rdr: R, flag: Flag) -> Reader<R> {
+        Reader::new(rdr, flag)
     }
 }
 
 impl<R: io::Read> Reader<R> {
-    pub fn new(rdr: R) -> Reader<R> {
+    pub fn new(rdr: R, flag: Flag) -> Reader<R> {
         Reader {
             rdr: io::BufReader::new(rdr),
             line: 0,
             id: String::new(),
+            flag,
         }
     }
 
@@ -65,7 +73,7 @@ impl<R: io::Read> Reader<R> {
                 }
             }
 
-            let parsed = parse_input_line(temp_buf.clone(), &mut record);
+            let parsed = parse_input_line(temp_buf.clone(), &mut record, self.flag);
 
             match parsed {
                 Ok(e) => match e {
@@ -96,35 +104,60 @@ impl<R: io::Read> Reader<R> {
 /// An inner private function to parse an input line. The output type is a little
 /// complex as we want to either skip lines, save the sequence name, or append
 /// fields to the `Record` struct.
-fn parse_input_line(input: String, record: &mut Record) -> Result<Option<Option<String>>> {
-    //
+fn parse_input_line(
+    input: String,
+    record: &mut Record,
+    flag: Flag,
+) -> Result<Option<Option<String>>> {
+    // depending on the flag
+    match flag {
+        // aka -d
+        Flag::D => {
+            // do the stuff we were doing before
+            if input.trim().is_empty() {
+                return Ok(None);
+            }
 
-    if input.trim().is_empty() {
-        return Ok(None);
-    }
+            if [
+                "Tandem Repeats",
+                "Gary Benson",
+                "Program",
+                "Boston",
+                "Version",
+                "Parameters",
+            ]
+            .iter()
+            .any(|s| input.starts_with(*s))
+            {
+                return Ok(None);
+            }
 
-    if [
-        "Tandem Repeats",
-        "Gary Benson",
-        "Program",
-        "Boston",
-        "Version",
-        "Parameters",
-    ]
-    .iter()
-    .any(|s| input.starts_with(*s))
-    {
-        return Ok(None);
-    }
-
-    if input.starts_with("Sequence") {
-        let name = input.replace("Sequence: ", "");
-        let name = name.trim().to_string();
-        return Ok(Some(Some(name)));
+            if input.starts_with("Sequence") {
+                let name = input.replace("Sequence: ", "").trim().to_string();
+                return Ok(Some(Some(name)));
+            }
+        }
+        // aka -ngs
+        Flag::Ngs => {
+            // simpler here, as we only worry about @ lines
+            if input.starts_with('@') {
+                let name = input.replace('@', "").trim().to_string();
+                return Ok(Some(Some(name)));
+            }
+        }
     }
 
     // that should cover everything? Now we split the line
-    let line_elements = input.split(' ').collect::<Vec<&str>>();
+    let mut line_elements = input.split(' ').collect::<Vec<&str>>();
+    // ignore flanking regions
+    match flag {
+        Flag::D => (),
+        Flag::Ngs => {
+            // two extra columns, so remove them
+            line_elements.truncate(line_elements.len() - 2);
+            assert!(line_elements.len() == 15);
+        }
+    }
 
     if let [start, end, period, copy_number, consensus_pattern_size, perc_matches, perc_indels, alignment_score, perc_a, perc_c, perc_g, perc_t, entropy, consensus_pattern, repeat_seq] =
         &line_elements[..]

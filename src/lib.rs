@@ -41,6 +41,6 @@ mod record;
 
 pub use crate::{
     error::{Error, ErrorKind, Result},
-    reader::{Reader, RecordsIntoIter, RecordsIter},
+    reader::{Flag, Reader, RecordsIntoIter, RecordsIter},
     record::Record,
 };
