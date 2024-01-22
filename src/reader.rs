@@ -264,3 +264,55 @@ impl<R: io::Read> Iterator for RecordsIntoIter<R> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Flag, Reader};
+
+    fn b(s: &str) -> &[u8] {
+        s.as_bytes()
+    }
+
+    #[test]
+    fn test_read_record() {
+        let data = b("51 71 11 1.9 11 100 0 84 19 4 38 38 1.73 TTAGGTTAGGC TTAGGTTAGGCTTAGGTTAGG");
+
+        let mut reader = Reader::from_reader(data, Flag::D);
+
+        let first = reader.records().next().unwrap().unwrap();
+
+        assert_eq!(first.start, 51);
+        assert_eq!(first.end, 71);
+        assert_eq!(first.consensus_pattern, "TTAGGTTAGGC".to_string());
+    }
+
+    #[test]
+    fn test_read_record_and_seq_id() {
+        let data = b("Sequence: first\n\n51 71 11 1.9 11 100 0 84 19 4 38 38 1.73 TTAGGTTAGGC TTAGGTTAGGCTTAGGTTAGG");
+
+        let mut reader = Reader::from_reader(data, Flag::D);
+
+        let first = reader.records().next().unwrap().unwrap();
+
+        assert_eq!(first.seq_id, "first".to_string());
+        assert_eq!(first.start, 51);
+        assert_eq!(first.end, 71);
+        assert_eq!(first.consensus_pattern, "TTAGGTTAGGC".to_string());
+    }
+
+    #[test]
+    fn test_flag_ngs() {
+        let data = b(
+            "@first\n51 71 11 1.9 11 100 0 84 19 4 38 38 1.73 TTAGGTTAGGC TTAGGTTAGGCTTAGGTTAGG . CW",
+        );
+
+        let mut reader = Reader::from_reader(data, Flag::Ngs);
+
+        let first = reader.records().next().unwrap().unwrap();
+
+        assert_eq!(first.seq_id, "first".to_string());
+        assert_eq!(first.start, 51);
+        assert_eq!(first.end, 71);
+        assert_eq!(first.consensus_pattern, "TTAGGTTAGGC".to_string());
+    }
+}
